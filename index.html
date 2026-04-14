@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Papanje — Meal Planner</title>
+
+  <!-- Tom Select -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <h1>papa<span>nje</span></h1>
+    <div class="week-selector">
+      <label for="weekSelect">week</label>
+      <select id="weekSelect">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- NAV -->
+  <nav>
+    <button class="active" data-view="plan">Plan</button>
+    <button data-view="shopper">Shopper</button>
+  </nav>
+
+  <!-- PLAN VIEW -->
+  <div id="view-plan" class="view active">
+    <div id="planGrid" class="plan-grid">
+      <div class="state-msg">Loading plan...</div>
+    </div>
+  </div>
+
+  <!-- SHOPPER VIEW -->
+  <div id="view-shopper" class="view">
+    <div class="shopper-header">
+      <h2>Shopping list</h2>
+    </div>
+    <div id="shopperList">
+      <div class="state-msg">Loading ingredients...</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>KBHR 570 AM · Northwestern Mining Co. · papanje v0.1</footer>
+
+  <script>
+    // ── CONFIG ──────────────────────────────────────────────
+    // TODO: replace with your actual Supabase credentials
+    const SUPABASE_URL = 'https://jjebajrnkrysrrkuafoe.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_ferpCd6L2QOpqF5tph_erw_y1YXAe8L';
+
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ── STATE ───────────────────────────────────────────────
+    let currentWeek = 1;
+
+    const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    const MEALS = ['breakfast','lunch','dinner'];
+
+    const PROTEIN_CLASS = {
+      egg: 'p-egg', seafood: 'p-seafood', beef: 'p-beef',
+      poultry: 'p-poultry', dairy: 'p-dairy', tofu: 'p-tofu'
+    };
+
+    // ── NAV ─────────────────────────────────────────────────
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
+        if (btn.dataset.view === 'shopper') loadShopper();
+      });
+    });
+
+    // ── WEEK SELECTOR ────────────────────────────────────────
+    document.getElementById('weekSelect').addEventListener('change', e => {
+      currentWeek = parseInt(e.target.value);
+      loadPlan();
+      // reload shopper if visible
+      if (document.getElementById('view-shopper').classList.contains('active')) loadShopper();
+    });
+
+    // ── LOAD PLAN ────────────────────────────────────────────
+    async function loadPlan() {
+      const grid = document.getElementById('planGrid');
+      grid.innerHTML = '<div class="state-msg">Loading...</div>';
+
+      const { data, error } = await db
+        .from('planner')
+        .select('week_day, meal_type, dish_name, dishes(protein)')
+        .eq('week', currentWeek)
+        .not('dish_name', 'is', null);
+
+      if (error) {
+        grid.innerHTML = `<div class="state-msg">Error: ${error.message}</div>`;
+        return;
+      }
+
+      // organise into day → meal → [dishes]
+      const plan = {};
+      DAYS.forEach(d => { plan[d] = {}; MEALS.forEach(m => plan[d][m] = []); });
+      data.forEach(row => {
+        if (plan[row.week_day] && plan[row.week_day][row.meal_type] !== undefined) {
+          plan[row.week_day][row.meal_type].push(row);
+        }
+      });
+
+      grid.innerHTML = DAYS.map(day => `
+        <div class="day-card">
+          <div class="day-header">${day}</div>
+          ${MEALS.map(meal => `
+            <div class="meal-row">
+              <div class="meal-label">${meal}</div>
+              <div class="meal-dishes">
+                ${plan[day][meal].length
+                  ? plan[day][meal].map(r => `
+                      <div class="dish-chip">
+                        <span class="protein-dot ${PROTEIN_CLASS[r.dishes?.protein] || 'p-default'}"></span>
+                        ${r.dish_name}
+                      </div>`).join('')
+                  : '<span class="empty-slot">—</span>'
+                }
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+
+    // ── LOAD SHOPPER ─────────────────────────────────────────
+    async function loadShopper() {
+      const container = document.getElementById('shopperList');
+      container.innerHTML = '<div class="state-msg">Aggregating ingredients...</div>';
+
+      // get dishes for this week
+      const { data: planRows, error: planErr } = await db
+        .from('planner')
+        .select('dish_name')
+        .eq('week', currentWeek)
+        .not('dish_name', 'is', null);
+
+      if (planErr) { container.innerHTML = `<div class="state-msg">Error: ${planErr.message}</div>`; return; }
+
+      const dishes = [...new Set(planRows.map(r => r.dish_name))];
+      if (!dishes.length) { container.innerHTML = '<div class="state-msg">No dishes planned for this week.</div>'; return; }
+
+      // get ingredients for those dishes
+      const { data: recipeRows, error: recipeErr } = await db
+        .from('recipes')
+        .select('ingredient, quantity, unit, ingredients(ingredient_category)')
+        .in('dish_name', dishes);
+
+      if (recipeErr) { container.innerHTML = `<div class="state-msg">Error: ${recipeErr.message}</div>`; return; }
+
+      // aggregate by ingredient
+      const agg = {};
+      recipeRows.forEach(r => {
+        const key = `${r.ingredient}||${r.unit || ''}`;
+        if (!agg[key]) {
+          agg[key] = {
+            ingredient: r.ingredient,
+            quantity: 0,
+            unit: r.unit || '',
+            category: r.ingredients?.ingredient_category || 'other'
+          };
+        }
+        agg[key].quantity += r.quantity || 0;
+      });
+
+      // group by category
+      const byCategory = {};
+      Object.values(agg).forEach(item => {
+        if (!byCategory[item.category]) byCategory[item.category] = [];
+        byCategory[item.category].push(item);
+      });
+
+      // sort categories and render
+      const catOrder = ['produce','protein','dairy','pantry','spices','condiment','fermented','other'];
+      const sorted = Object.keys(byCategory).sort((a,b) => {
+        return (catOrder.indexOf(a) === -1 ? 99 : catOrder.indexOf(a)) -
+               (catOrder.indexOf(b) === -1 ? 99 : catOrder.indexOf(b));
+      });
+
+      container.innerHTML = sorted.map(cat => `
+        <div class="category-group">
+          <div class="category-label">${cat}</div>
+          ${byCategory[cat]
+            .sort((a,b) => a.ingredient.localeCompare(b.ingredient))
+            .map(item => `
+              <div class="ingredient-row">
+                <span>${item.ingredient}</span>
+                <span class="ingredient-qty">${item.quantity > 0 ? item.quantity : ''} ${item.unit}</span>
+              </div>
+            `).join('')}
+        </div>
+      `).join('');
+    }
+
+    // ── INIT ─────────────────────────────────────────────────
+    loadPlan();
+  </script>
+</body>
+</html>

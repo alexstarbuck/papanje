@@ -19,84 +19,6 @@
 
   <!-- App styles -->
   <link rel="stylesheet" href="style.css" />
-
-  <style>
-    /* ── MODAL ────────────────────────────────────────────── */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(26,23,20,0.55);
-      z-index: 200;
-      align-items: flex-end;
-      justify-content: center;
-    }
-    .modal-backdrop.open {
-      display: flex;
-    }
-    .modal {
-      background: var(--surface);
-      border-radius: 16px 16px 0 0;
-      padding: 1.5rem 1.25rem 2rem;
-      width: 100%;
-      max-width: 560px;
-      box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
-      animation: slideUp 0.2s ease-out;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(40px); opacity: 0; }
-      to   { transform: translateY(0);   opacity: 1; }
-    }
-    .modal-label {
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-    }
-    .modal-label strong {
-      color: var(--text);
-      font-style: italic;
-      font-family: var(--serif);
-      font-size: 0.85rem;
-      letter-spacing: 0;
-      text-transform: none;
-    }
-    /* Tom Select overrides */
-    .ts-wrapper { margin-top: 0.25rem; }
-    .ts-control {
-      border: 1.5px solid var(--border) !important;
-      border-radius: var(--radius) !important;
-      font-family: var(--sans) !important;
-      font-size: 1rem !important;
-      padding: 0.6rem 0.75rem !important;
-      box-shadow: none !important;
-    }
-    .ts-control.focus { border-color: var(--accent) !important; }
-    .ts-dropdown {
-      border: 1.5px solid var(--border) !important;
-      border-radius: var(--radius) !important;
-      font-family: var(--sans) !important;
-      font-size: 0.95rem !important;
-      box-shadow: var(--shadow) !important;
-    }
-    .ts-dropdown .option.active,
-    .ts-dropdown .option:hover {
-      background: var(--accent-lt) !important;
-      color: var(--text) !important;
-    }
-    /* tappable dish chips */
-    .dish-chip {
-      cursor: pointer;
-      border-radius: 4px;
-      padding: 2px 4px;
-      margin: -2px -4px;
-      transition: background 0.1s;
-    }
-    .dish-chip:hover,
-    .dish-chip:active { background: var(--accent-lt); }
-  </style>
 </head>
 <body>
 
@@ -141,19 +63,12 @@
     </div>
   </div>
 
-  <!-- EDIT MODAL -->
-  <div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal">
-      <div class="modal-label" id="modalLabel">Changing dish</div>
-      <select id="dishSelect"></select>
-    </div>
-  </div>
-
   <!-- FOOTER -->
   <footer>KBHR 570 AM · Northwestern Mining Co. · papanje v0.1</footer>
 
   <script>
     // ── CONFIG ──────────────────────────────────────────────
+    // TODO: replace with your actual Supabase credentials
     const SUPABASE_URL = 'https://jjebajrnkrysrrkuafoe.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_ferpCd6L2QOpqF5tph_erw_y1YXAe8L';
 
@@ -162,11 +77,10 @@
 
     // ── STATE ───────────────────────────────────────────────
     let currentWeek = 1;
-    let allDishes    = [];   // cached dish list for Tom Select
-    let tomSelect    = null; // Tom Select instance
 
     const DAYS  = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     const MEALS = ['breakfast','lunch','dinner'];
+
     const PROTEIN_CLASS = {
       egg: 'p-egg', seafood: 'p-seafood', beef: 'p-beef',
       poultry: 'p-poultry', dairy: 'p-dairy', tofu: 'p-tofu'
@@ -190,13 +104,6 @@
       if (document.getElementById('view-shopper').classList.contains('active')) loadShopper();
     });
 
-    // ── LOAD DISHES (cached) ─────────────────────────────────
-    async function loadDishes() {
-      if (allDishes.length) return;
-      const { data } = await db.from('dishes').select('dish_name, protein').order('dish_name');
-      allDishes = data || [];
-    }
-
     // ── LOAD PLAN ────────────────────────────────────────────
     async function loadPlan() {
       const grid = document.getElementById('planGrid');
@@ -204,7 +111,7 @@
 
       const { data, error } = await db
         .from('planner')
-        .select('id, week_day, meal_type, dish_name, dishes(protein)')
+        .select('week_day, meal_type, dish_name, dishes(protein)')
         .eq('week', currentWeek)
         .not('dish_name', 'is', null);
 
@@ -216,25 +123,21 @@
       const plan = {};
       DAYS.forEach(d => { plan[d] = {}; MEALS.forEach(m => plan[d][m] = []); });
       data.forEach(row => {
-        if (plan[row.week_day]?.[row.meal_type] !== undefined) {
+        if (plan[row.week_day] && plan[row.week_day][row.meal_type] !== undefined) {
           plan[row.week_day][row.meal_type].push(row);
         }
       });
 
       grid.innerHTML = DAYS.map(day => `
         <div class="day-card">
-          <div class="day-header">${day.charAt(0).toUpperCase() + day.slice(1)}</div>
+          <div class="day-header">${day}</div>
           ${MEALS.map(meal => `
             <div class="meal-row">
               <div class="meal-label">${meal}</div>
               <div class="meal-dishes">
                 ${plan[day][meal].length
                   ? plan[day][meal].map(r => `
-                      <div class="dish-chip"
-                           data-id="${r.id}"
-                           data-dish="${r.dish_name}"
-                           data-day="${day}"
-                           data-meal="${meal}">
+                      <div class="dish-chip">
                         <span class="protein-dot ${PROTEIN_CLASS[r.dishes?.protein] || 'p-default'}"></span>
                         ${r.dish_name}
                       </div>`).join('')
@@ -245,72 +148,6 @@
           `).join('')}
         </div>
       `).join('');
-
-      // attach tap handlers
-      document.querySelectorAll('.dish-chip').forEach(chip => {
-        chip.addEventListener('click', () => openModal(
-          parseInt(chip.dataset.id),
-          chip.dataset.dish,
-          chip.dataset.day,
-          chip.dataset.meal
-        ));
-      });
-    }
-
-    // ── MODAL ────────────────────────────────────────────────
-    async function openModal(rowId, currentDish, day, meal) {
-      await loadDishes();
-
-      // update label
-      document.getElementById('modalLabel').innerHTML =
-        `${day.charAt(0).toUpperCase()+day.slice(1)} · ${meal} &nbsp;→&nbsp; <strong>${currentDish}</strong>`;
-
-      // destroy previous Tom Select instance
-      if (tomSelect) { tomSelect.destroy(); tomSelect = null; }
-
-      // reset the select element
-      const sel = document.getElementById('dishSelect');
-      sel.innerHTML = '';
-
-      // init Tom Select
-      tomSelect = new TomSelect(sel, {
-        options: allDishes.map(d => ({ value: d.dish_name, text: d.dish_name })),
-        items: [currentDish],
-        maxItems: 1,
-        placeholder: 'Search dishes...',
-        onInitialize() { this.open(); },
-        onChange: async (value) => {
-          if (!value || value === currentDish) { closeModal(); return; }
-          await saveChange(rowId, value);
-        }
-      });
-
-      document.getElementById('modalBackdrop').classList.add('open');
-    }
-
-    function closeModal() {
-      document.getElementById('modalBackdrop').classList.remove('open');
-      if (tomSelect) { tomSelect.destroy(); tomSelect = null; }
-    }
-
-    // close on backdrop tap
-    document.getElementById('modalBackdrop').addEventListener('click', e => {
-      if (e.target === e.currentTarget) closeModal();
-    });
-
-    // ── SAVE CHANGE ──────────────────────────────────────────
-    async function saveChange(rowId, newDish) {
-      closeModal();
-      const { error } = await db
-        .from('planner')
-        .update({ dish_name: newDish })
-        .eq('id', rowId);
-
-      if (error) {
-        alert(`Save failed: ${error.message}`);
-        return;
-      }
-      loadPlan(); // refresh view
     }
 
     // ── LOAD SHOPPER ─────────────────────────────────────────
@@ -327,29 +164,38 @@
       if (planErr) { container.innerHTML = `<div class="state-msg">Error: ${planErr.message}</div>`; return; }
       if (!planRows.length) { container.innerHTML = '<div class="state-msg">No dishes planned for this week.</div>'; return; }
 
+      // count occurrences of each dish
       const dishCount = {};
       planRows.forEach(r => {
         dishCount[r.dish_name] = (dishCount[r.dish_name] || 0) + 1;
       });
 
+      const dishes = Object.keys(dishCount);
+
       const { data: recipeRows, error: recipeErr } = await db
         .from('recipes')
         .select('dish_name, ingredient, quantity, unit, ingredients(ingredient_category)')
-        .in('dish_name', Object.keys(dishCount));
+        .in('dish_name', dishes);
 
       if (recipeErr) { container.innerHTML = `<div class="state-msg">Error: ${recipeErr.message}</div>`; return; }
 
+      // aggregate: quantity × occurrences
       const agg = {};
       recipeRows.forEach(r => {
         const multiplier = dishCount[r.dish_name] || 1;
         const key = `${r.ingredient}||${r.unit || ''}`;
         if (!agg[key]) {
-          agg[key] = { ingredient: r.ingredient, quantity: 0, unit: r.unit || '',
-                       category: r.ingredients?.ingredient_category || 'other' };
+          agg[key] = {
+            ingredient: r.ingredient,
+            quantity: 0,
+            unit: r.unit || '',
+            category: r.ingredients?.ingredient_category || 'other'
+          };
         }
         agg[key].quantity += (r.quantity || 0) * multiplier;
       });
 
+      // group by category
       const byCategory = {};
       Object.values(agg).forEach(item => {
         if (!byCategory[item.category]) byCategory[item.category] = [];
@@ -357,10 +203,10 @@
       });
 
       const catOrder = ['produce','protein','dairy','pantry','spices','condiment','fermented','other'];
-      const sorted = Object.keys(byCategory).sort((a, b) =>
-        (catOrder.indexOf(a) === -1 ? 99 : catOrder.indexOf(a)) -
-        (catOrder.indexOf(b) === -1 ? 99 : catOrder.indexOf(b))
-      );
+      const sorted = Object.keys(byCategory).sort((a, b) => {
+        return (catOrder.indexOf(a) === -1 ? 99 : catOrder.indexOf(a)) -
+              (catOrder.indexOf(b) === -1 ? 99 : catOrder.indexOf(b));
+      });
 
       container.innerHTML = sorted.map(cat => `
         <div class="category-group">
@@ -371,8 +217,10 @@
               <div class="ingredient-row">
                 <span>${item.ingredient}</span>
                 <span class="ingredient-qty">${item.quantity > 0 ? item.quantity : ''} ${item.unit}</span>
-              </div>`).join('')}
-        </div>`).join('');
+              </div>
+            `).join('')}
+        </div>
+      `).join('');
     }
 
     // ── INIT ─────────────────────────────────────────────────

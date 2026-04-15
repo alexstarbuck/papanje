@@ -157,7 +157,8 @@
     const SUPABASE_URL = 'https://jjebajrnkrysrrkuafoe.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_ferpCd6L2QOpqF5tph_erw_y1YXAe8L';
 
-    const { createClient } = supabase;
+    console.log('supabase global:', typeof supabase, typeof window.supabase);
+    const { createClient } = window.supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // ── STATE ───────────────────────────────────────────────

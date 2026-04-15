@@ -154,50 +154,78 @@
 
     // ── LOAD SHOPPER ─────────────────────────────────────────
     async function loadShopper() {
-      const container = document.getElementById('shopperList');
-      container.innerHTML = '<div class="state-msg">Aggregating ingredients...</div>';
+  const container = document.getElementById('shopperList');
+  container.innerHTML = '<div class="state-msg">Aggregating ingredients...</div>';
 
-      // get dishes for this week
-      const { data: planRows, error: planErr } = await db
-        .from('planner')
-        .select('dish_name')
-        .eq('week', currentWeek)
-        .not('dish_name', 'is', null);
+  // get ALL planner rows for this week (not just unique)
+  const { data: planRows, error: planErr } = await db
+    .from('planner')
+    .select('dish_name')
+    .eq('week', currentWeek)
+    .not('dish_name', 'is', null);
 
-      if (planErr) { container.innerHTML = `<div class="state-msg">Error: ${planErr.message}</div>`; return; }
+  if (planErr) { container.innerHTML = `<div class="state-msg">Error: ${planErr.message}</div>`; return; }
+  if (!planRows.length) { container.innerHTML = '<div class="state-msg">No dishes planned for this week.</div>'; return; }
 
-      const dishes = [...new Set(planRows.map(r => r.dish_name))];
-      if (!dishes.length) { container.innerHTML = '<div class="state-msg">No dishes planned for this week.</div>'; return; }
+  // count occurrences of each dish
+  const dishCount = {};
+  planRows.forEach(r => {
+    dishCount[r.dish_name] = (dishCount[r.dish_name] || 0) + 1;
+  });
 
-      // get ingredients for those dishes
-      const { data: recipeRows, error: recipeErr } = await db
-        .from('recipes')
-        .select('ingredient, quantity, unit, ingredients(ingredient_category)')
-        .in('dish_name', dishes);
+  const dishes = Object.keys(dishCount);
 
-      if (recipeErr) { container.innerHTML = `<div class="state-msg">Error: ${recipeErr.message}</div>`; return; }
+  // get ingredients for those dishes
+  const { data: recipeRows, error: recipeErr } = await db
+    .from('recipes')
+    .select('dish_name, ingredient, quantity, unit, ingredients(ingredient_category)')
+    .in('dish_name', dishes);
 
-      // aggregate by ingredient
-      const agg = {};
-      recipeRows.forEach(r => {
-        const key = `${r.ingredient}||${r.unit || ''}`;
-        if (!agg[key]) {
-          agg[key] = {
-            ingredient: r.ingredient,
-            quantity: 0,
-            unit: r.unit || '',
-            category: r.ingredients?.ingredient_category || 'other'
-          };
-        }
-        agg[key].quantity += r.quantity || 0;
-      });
+  if (recipeErr) { container.innerHTML = `<div class="state-msg">Error: ${recipeErr.message}</div>`; return; }
 
-      // group by category
-      const byCategory = {};
-      Object.values(agg).forEach(item => {
-        if (!byCategory[item.category]) byCategory[item.category] = [];
-        byCategory[item.category].push(item);
-      });
+  // aggregate: quantity × how many times dish appears that week
+  const agg = {};
+  recipeRows.forEach(r => {
+    const multiplier = dishCount[r.dish_name] || 1;
+    const key = `${r.ingredient}||${r.unit || ''}`;
+    if (!agg[key]) {
+      agg[key] = {
+        ingredient: r.ingredient,
+        quantity: 0,
+        unit: r.unit || '',
+        category: r.ingredients?.ingredient_category || 'other'
+      };
+    }
+    agg[key].quantity += (r.quantity || 0) * multiplier;
+  });
+
+  // group by category
+  const byCategory = {};
+  Object.values(agg).forEach(item => {
+    if (!byCategory[item.category]) byCategory[item.category] = [];
+    byCategory[item.category].push(item);
+  });
+
+  const catOrder = ['produce','protein','dairy','pantry','spices','condiment','fermented','other'];
+  const sorted = Object.keys(byCategory).sort((a, b) => {
+    return (catOrder.indexOf(a) === -1 ? 99 : catOrder.indexOf(a)) -
+           (catOrder.indexOf(b) === -1 ? 99 : catOrder.indexOf(b));
+  });
+
+  container.innerHTML = sorted.map(cat => `
+    <div class="category-group">
+      <div class="category-label">${cat}</div>
+      ${byCategory[cat]
+        .sort((a, b) => a.ingredient.localeCompare(b.ingredient))
+        .map(item => `
+          <div class="ingredient-row">
+            <span>${item.ingredient}</span>
+            <span class="ingredient-qty">${item.quantity > 0 ? item.quantity : ''} ${item.unit}</span>
+          </div>
+        `).join('')}
+    </div>
+  `).join('');
+}
 
       // sort categories and render
       const catOrder = ['produce','protein','dairy','pantry','spices','condiment','fermented','other'];

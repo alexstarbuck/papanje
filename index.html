@@ -157,14 +157,13 @@
     const SUPABASE_URL = 'https://jjebajrnkrysrrkuafoe.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_ferpCd6L2QOpqF5tph_erw_y1YXAe8L';
 
-    console.log('supabase global:', typeof supabase, typeof window.supabase);
-    const { createClient } = window.supabase;
+    const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // ── STATE ───────────────────────────────────────────────
     let currentWeek = 1;
     let allDishes    = [];   // cached dish list for Tom Select
-    let tomSelect    = null; // Tom Select instance
+    let tsInstance    = null; // Tom Select instance
 
     const DAYS  = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     const MEALS = ['breakfast','lunch','dinner'];
@@ -267,14 +266,14 @@
         `${day.charAt(0).toUpperCase()+day.slice(1)} · ${meal} &nbsp;→&nbsp; <strong>${currentDish}</strong>`;
 
       // destroy previous Tom Select instance
-      if (tomSelect) { tomSelect.destroy(); tomSelect = null; }
+      if (tsInstance) { tsInstance.destroy(); tsInstance = null; }
 
       // reset the select element
       const sel = document.getElementById('dishSelect');
       sel.innerHTML = '';
 
       // init Tom Select
-      tomSelect = new TomSelect(sel, {
+      tsInstance = new TomSelect(sel, {
         options: allDishes.map(d => ({ value: d.dish_name, text: d.dish_name })),
         items: [currentDish],
         maxItems: 1,
@@ -291,7 +290,7 @@
 
     function closeModal() {
       document.getElementById('modalBackdrop').classList.remove('open');
-      if (tomSelect) { tomSelect.destroy(); tomSelect = null; }
+      if (tsInstance) { tsInstance.destroy(); tsInstance = null; }
     }
 
     // close on backdrop tap

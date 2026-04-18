@@ -20,83 +20,6 @@
   <!-- App styles -->
   <link rel="stylesheet" href="style.css?v=2" />
 
-  <style>
-    /* ── MODAL ────────────────────────────────────────────── */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(26,23,20,0.55);
-      z-index: 200;
-      align-items: flex-end;
-      justify-content: center;
-    }
-    .modal-backdrop.open {
-      display: flex;
-    }
-    .modal {
-      background: var(--surface);
-      border-radius: 16px 16px 0 0;
-      padding: 1.5rem 1.25rem 2rem;
-      width: 100%;
-      max-width: 560px;
-      box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
-      animation: slideUp 0.2s ease-out;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(40px); opacity: 0; }
-      to   { transform: translateY(0);   opacity: 1; }
-    }
-    .modal-label {
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-    }
-    .modal-label strong {
-      color: var(--text);
-      font-style: italic;
-      font-family: var(--serif);
-      font-size: 0.85rem;
-      letter-spacing: 0;
-      text-transform: none;
-    }
-    /* Tom Select overrides */
-    .ts-wrapper { margin-top: 0.25rem; }
-    .ts-control {
-      border: 1.5px solid var(--border) !important;
-      border-radius: var(--radius) !important;
-      font-family: var(--sans) !important;
-      font-size: 1rem !important;
-      padding: 0.6rem 0.75rem !important;
-      box-shadow: none !important;
-    }
-    .ts-control.focus { border-color: var(--accent) !important; }
-    .ts-dropdown {
-      border: 1.5px solid var(--border) !important;
-      border-radius: var(--radius) !important;
-      font-family: var(--sans) !important;
-      font-size: 0.95rem !important;
-      box-shadow: var(--shadow) !important;
-    }
-    .ts-dropdown .option.active,
-    .ts-dropdown .option:hover {
-      background: var(--accent-lt) !important;
-      color: var(--text) !important;
-    }
-    /* tappable dish chips */
-    .dish-chip {
-      cursor: pointer;
-      border-radius: 4px;
-      padding: 2px 4px;
-      margin: -2px -4px;
-      transition: background 0.1s;
-    }
-    .dish-chip:hover,
-    .dish-chip:active { background: var(--accent-lt); }
-  </style>
 </head>
 <body>
 
@@ -162,7 +85,6 @@
 
     // ── STATE ───────────────────────────────────────────────
     let currentWeek = 1;
-    let allDishes    = [];   // cached dish list for Tom Select
     let tsInstance    = null; // Tom Select instance
 
     const DAYS  = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
@@ -189,13 +111,6 @@
       loadPlan();
       if (document.getElementById('view-shopper').classList.contains('active')) loadShopper();
     });
-
-    // ── LOAD DISHES (cached) ─────────────────────────────────
-    async function loadDishes() {
-      if (allDishes.length) return;
-      const { data } = await db.from('dishes').select('dish_name, protein').order('dish_name');
-      allDishes = data || [];
-    }
 
     // ── LOAD PLAN ────────────────────────────────────────────
     async function loadPlan() {
@@ -259,33 +174,69 @@
 
     // ── MODAL ────────────────────────────────────────────────
     async function openModal(rowId, currentDish, day, meal) {
-      await loadDishes();
-
       // update label
       document.getElementById('modalLabel').innerHTML =
         `${day.charAt(0).toUpperCase()+day.slice(1)} · ${meal} &nbsp;→&nbsp; <strong>${currentDish}</strong>`;
 
-      // destroy previous Tom Select instance
-      if (tsInstance) { tsInstance.destroy(); tsInstance = null; }
+    // destroy previous instance
+    if (tsInstance) { tsInstance.destroy(); tsInstance = null; }
 
-      // reset the select element
-      const sel = document.getElementById('dishSelect');
-      sel.innerHTML = '';
+    // reset select
+    const sel = document.getElementById('dishSelect');
+    sel.innerHTML = '';
 
-      // init Tom Select
+    // open modal first, THEN init Tom Select after animation completes
+    document.getElementById('modalBackdrop').classList.add('open');
+
+    setTimeout(() => {
       tsInstance = new TomSelect(sel, {
-        options: allDishes.map(d => ({ value: d.dish_name, text: d.dish_name })),
-        items: [currentDish],
+        options: [],
+        items: [],
         maxItems: 1,
-        placeholder: 'Search dishes...',
-        onInitialize() { this.open(); },
-        onChange: async (value) => {
-          if (!value || value === currentDish) { closeModal(); return; }
+        placeholder: 'Start typing a dish name...',
+        dropdownParent: document.querySelector('#modalBackdrop .modal'),
+        openOnFocus: true,
+        closeAfterSelect: true,
+        shouldLoad: (query) => query.length >= 2,
+        load: async (query, callback) => {
+          try {
+            if (query.length < 2) return callback();
+            const { data, error } = await db
+              .from('dishes')
+              .select('dish_name')
+              .ilike('dish_name', `%${query}%`)
+              .order('dish_name')
+              .limit(10);
+
+            if (error) throw error;
+            callback((data || []).map(r => ({ value: r.dish_name, text: r.dish_name })));
+          } catch (err) {
+            console.error('Dish search failed', err);
+            callback();
+          }
+        },
+        onType: function(query) {
+          // When query is too short, ensure no results are shown
+          if ((query || '').length < 2) {
+            this.clearOptions();
+            this.refreshOptions(false);
+            this.close();
+            return;
+          }
+          this.open();
+        },
+        onItemAdd: async (value) => {
+          if (!value) return;
+          if (value === currentDish) { closeModal(); return; }
           await saveChange(rowId, value);
+        },
+        onClear: () => {
+          // Allow backspace/clear to edit the search input without closing the modal
         }
       });
-
-      document.getElementById('modalBackdrop').classList.add('open');
+      tsInstance.focus();
+      setTimeout(() => { tsInstance.focus(); }, 100);
+    }, 250);
     }
 
     function closeModal() {
@@ -295,12 +246,11 @@
 
     // close on backdrop tap
     document.getElementById('modalBackdrop').addEventListener('click', e => {
-      if (e.target === e.currentTarget) closeModal();
+      if (e.target === document.getElementById('modalBackdrop')) closeModal();
     });
 
     // ── SAVE CHANGE ──────────────────────────────────────────
     async function saveChange(rowId, newDish) {
-      closeModal();
       const { error } = await db
         .from('planner')
         .update({ dish_name: newDish })
@@ -310,6 +260,7 @@
         alert(`Save failed: ${error.message}`);
         return;
       }
+      closeModal();
       loadPlan(); // refresh view
     }
 
@@ -380,3 +331,4 @@
   </script>
 </body>
 </html>
+

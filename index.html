@@ -18,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- App styles -->
-  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="style.css?v=3" />
 
 </head>
 <body>
@@ -26,6 +26,7 @@
   <!-- HEADER -->
   <header>
     <h1>papa<span>nje</span></h1>
+    <!--
     <div class="week-selector">
       <label for="weekSelect">week</label>
       <select id="weekSelect">
@@ -39,16 +40,24 @@
         <option value="8">8</option>
       </select>
     </div>
+    -->
   </header>
 
   <!-- NAV -->
   <nav>
     <button class="active" data-view="plan">Plan</button>
     <button data-view="shopper">Shopper</button>
+    <button data-view="add">Add</button>
   </nav>
 
   <!-- PLAN VIEW -->
   <div id="view-plan" class="view active">
+    <div class="week-nav" aria-label="Week navigation">
+      <button type="button" class="week-nav-btn" id="weekPrev" aria-label="Previous week">◀</button>
+      <div class="week-nav-title" id="weekNavTitle">Week 1</div>
+      <button type="button" class="week-nav-btn" id="weekNext" aria-label="Next week">▶</button>
+      <button type="button" class="week-nav-add" id="weekAdd" aria-label="Add week">+</button>
+    </div>
     <div id="planGrid" class="plan-grid">
       <div class="state-msg">Loading plan...</div>
     </div>
@@ -64,6 +73,137 @@
     </div>
   </div>
 
+  <!-- ADD VIEW -->
+  <div id="view-add" class="view">
+    <div class="add-stack">
+
+      <!-- Ingredient -->
+      <section class="collapsible" data-collapsible>
+        <button type="button" class="collapsible-header" data-collapsible-toggle aria-expanded="false">
+          New ingredient
+        </button>
+        <div class="collapsible-panel" hidden>
+          <form id="formIngredient" class="add-form" novalidate>
+            <div class="form-flash" id="flashIngredient" hidden></div>
+
+            <label class="field">
+              <span class="field-label">Ingredient name</span>
+              <input class="field-input" id="ingName" name="ingredient" type="text" autocomplete="off" required />
+              <div class="field-error" id="ingNameErr" hidden></div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Category</span>
+              <select class="field-input" id="ingCategory" name="ingredient_category" required></select>
+              <div class="field-error" id="ingCategoryErr" hidden></div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Season</span>
+              <input class="field-input" id="ingSeason" name="season" type="text" placeholder="all, summer, winter..." />
+              <div class="field-error" id="ingSeasonErr" hidden></div>
+            </label>
+
+            <div class="form-actions">
+              <button class="btn" type="submit">Save ingredient</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Dish -->
+      <section class="collapsible" data-collapsible>
+        <button type="button" class="collapsible-header" data-collapsible-toggle aria-expanded="false">
+          New dish
+        </button>
+        <div class="collapsible-panel" hidden>
+          <form id="formDish" class="add-form" novalidate>
+            <div class="form-flash" id="flashDish" hidden></div>
+
+            <label class="field">
+              <span class="field-label">Dish name</span>
+              <input class="field-input" id="dishName" name="dish_name" type="text" autocomplete="off" required />
+              <div class="field-error" id="dishNameErr" hidden></div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Protein</span>
+              <select class="field-input" id="dishProtein" name="protein" required></select>
+              <div class="field-error" id="dishProteinErr" hidden></div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Time</span>
+              <input class="field-input" id="dishTime" name="time" type="text" placeholder="00:30:00" />
+              <div class="field-error" id="dishTimeErr" hidden></div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Instructions</span>
+              <textarea class="field-input field-textarea" id="dishInstructions" name="instructions" rows="4"></textarea>
+              <div class="field-error" id="dishInstructionsErr" hidden></div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Notes</span>
+              <textarea class="field-input field-textarea" id="dishNotes" name="notes" rows="3"></textarea>
+              <div class="field-error" id="dishNotesErr" hidden></div>
+            </label>
+
+            <div class="form-actions">
+              <button class="btn" type="submit">Save dish</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Recipe -->
+      <section class="collapsible" data-collapsible>
+        <button type="button" class="collapsible-header" data-collapsible-toggle aria-expanded="false">
+          New recipe
+        </button>
+        <div class="collapsible-panel" hidden>
+          <form id="formRecipe" class="add-form" novalidate>
+            <div class="form-flash" id="flashRecipe" hidden></div>
+
+            <div class="field">
+              <span class="field-label">Dish</span>
+              <div class="ts-host">
+                <select id="recipeDishSelect"></select>
+              </div>
+              <div class="field-error" id="recipeDishErr" hidden></div>
+            </div>
+
+            <div class="recipe-rows" id="recipeRows"></div>
+
+            <div class="recipe-add-row">
+              <button type="button" class="btn btn-ghost" id="recipeAddIngredientRow">+ Add ingredient</button>
+            </div>
+
+            <label class="field">
+              <span class="field-label">Notes (applies to all rows)</span>
+              <input class="field-input" id="recipeNotes" name="notes" type="text" />
+              <div class="field-error" id="recipeNotesErr" hidden></div>
+            </label>
+
+            <div class="recipe-warning" id="recipeDupWarn" hidden>
+              <div class="recipe-warning-text" id="recipeDupWarnText"></div>
+              <div class="recipe-warning-actions">
+                <button type="button" class="btn btn-ghost" id="recipeDupCancel">Cancel</button>
+                <button type="button" class="btn" id="recipeDupProceed">Proceed</button>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" type="submit" id="recipeSubmitBtn">Save recipe</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
   <!-- EDIT MODAL -->
   <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal">
@@ -74,6 +214,18 @@
 
   <!-- FOOTER -->
   <footer>KBHR 570 AM · Northwestern Mining Co. · papanje v0.1</footer>
+
+  <!-- weekSelect must remain in the DOM for JS + hidden header control -->
+  <select id="weekSelect" hidden>
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
+  </select>
 
   <script>
     // ── CONFIG ──────────────────────────────────────────────
@@ -86,6 +238,9 @@
     // ── STATE ───────────────────────────────────────────────
     let currentWeek = 1;
     let tsInstance    = null; // Tom Select instance
+    let addLookupsLoaded = false;
+    let recipeDishTs = null;
+    let recipeAllowAppend = false;
 
     const DAYS  = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     const MEALS = ['breakfast','lunch','dinner'];
@@ -102,15 +257,503 @@
         btn.classList.add('active');
         document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
         if (btn.dataset.view === 'shopper') loadShopper();
+        if (btn.dataset.view === 'add') initAddView();
       });
     });
 
     // ── WEEK SELECTOR ────────────────────────────────────────
-    document.getElementById('weekSelect').addEventListener('change', e => {
-      currentWeek = parseInt(e.target.value);
+    const weekSelect = document.getElementById('weekSelect');
+    const weekNavTitle = document.getElementById('weekNavTitle');
+    const weekPrevBtn = document.getElementById('weekPrev');
+    const weekNextBtn = document.getElementById('weekNext');
+    const weekAddBtn = document.getElementById('weekAdd');
+
+    function syncWeekControls() {
+      weekSelect.value = String(currentWeek);
+      weekNavTitle.textContent = `Week ${currentWeek}`;
+
+      weekPrevBtn.disabled = currentWeek <= 1;
+      weekNextBtn.disabled = currentWeek >= 8;
+    }
+
+    function onWeekChanged() {
       loadPlan();
       if (document.getElementById('view-shopper').classList.contains('active')) loadShopper();
+    }
+
+    weekSelect.addEventListener('change', e => {
+      currentWeek = parseInt(e.target.value);
+      syncWeekControls();
+      onWeekChanged();
     });
+
+    weekPrevBtn.addEventListener('click', () => {
+      if (currentWeek <= 1) return;
+      currentWeek -= 1;
+      weekSelect.value = String(currentWeek);
+      syncWeekControls();
+      onWeekChanged();
+    });
+
+    weekNextBtn.addEventListener('click', () => {
+      if (currentWeek >= 8) return;
+      currentWeek += 1;
+      weekSelect.value = String(currentWeek);
+      syncWeekControls();
+      onWeekChanged();
+    });
+
+    weekAddBtn.addEventListener('click', () => {
+      console.log('add week');
+    });
+
+    // ── ADD VIEW (collapsible forms) ─────────────────────────
+    function qs(id) { return document.getElementById(id); }
+
+    function setFieldError(el, message) {
+      if (!message) {
+        el.hidden = true;
+        el.textContent = '';
+        return;
+      }
+      el.hidden = false;
+      el.textContent = message;
+    }
+
+    function setFlash(el, kind, message) {
+      if (!message) {
+        el.hidden = true;
+        el.textContent = '';
+        el.classList.remove('flash-success', 'flash-error');
+        return;
+      }
+      el.hidden = false;
+      el.textContent = message;
+      el.classList.remove('flash-success', 'flash-error');
+      el.classList.add(kind === 'error' ? 'flash-error' : 'flash-success');
+    }
+
+    function wireCollapsibles() {
+      document.querySelectorAll('[data-collapsible]').forEach(section => {
+        const btn = section.querySelector('[data-collapsible-toggle]');
+        const panel = section.querySelector('.collapsible-panel');
+        if (!btn || !panel) return;
+        if (btn.dataset.wired === '1') return;
+        btn.dataset.wired = '1';
+
+        btn.addEventListener('click', () => {
+          const open = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+          panel.hidden = open;
+          section.classList.toggle('is-open', !open);
+          if (!open && section.querySelector('#formRecipe')) initRecipeFormIfNeeded();
+        });
+      });
+    }
+
+    async function loadAddLookups() {
+      if (addLookupsLoaded) return;
+
+      const [cats, proteins, units] = await Promise.all([
+        db.from('ingredient_categories').select('category').order('category'),
+        db.from('protein_types').select('protein').order('protein'),
+        db.from('units').select('unit').order('unit')
+      ]);
+
+      if (cats.error) throw cats.error;
+      if (proteins.error) throw proteins.error;
+      if (units.error) throw units.error;
+
+      const ingCat = qs('ingCategory');
+      ingCat.innerHTML = `<option value="" disabled selected>Select a category</option>` +
+        (cats.data || []).map(r => `<option value="${r.category}">${r.category}</option>`).join('');
+
+      const dishProt = qs('dishProtein');
+      dishProt.innerHTML = `<option value="" disabled selected>Select a protein</option>` +
+        (proteins.data || []).map(r => `<option value="${r.protein}">${r.protein}</option>`).join('');
+
+      window.__unitsList = (units.data || []).map(r => r.unit).filter(Boolean);
+      addLookupsLoaded = true;
+    }
+
+    function destroyTomSelect(ts) {
+      if (!ts) return;
+      try { ts.destroy(); } catch (_) {}
+    }
+
+    function makeDishTomSelectConfig(dropdownParent) {
+      return {
+        options: [],
+        items: [],
+        maxItems: 1,
+        placeholder: 'Start typing a dish name...',
+        dropdownParent,
+        openOnFocus: true,
+        closeAfterSelect: true,
+        shouldLoad: (query) => query.length >= 2,
+        load: async (query, callback) => {
+          try {
+            if (query.length < 2) return callback();
+            const { data, error } = await db
+              .from('dishes')
+              .select('dish_name')
+              .ilike('dish_name', `%${query}%`)
+              .order('dish_name')
+              .limit(10);
+            if (error) throw error;
+            callback((data || []).map(r => ({ value: r.dish_name, text: r.dish_name })));
+          } catch (err) {
+            console.error('Dish search failed', err);
+            callback();
+          }
+        },
+        onType: function(query) {
+          if ((query || '').length < 2) {
+            this.clearOptions();
+            this.refreshOptions(false);
+            this.close();
+            return;
+          }
+          this.open();
+        }
+      };
+    }
+
+    function makeIngredientTomSelectConfig(dropdownParent) {
+      return {
+        options: [],
+        items: [],
+        maxItems: 1,
+        placeholder: 'Start typing an ingredient...',
+        dropdownParent,
+        openOnFocus: true,
+        closeAfterSelect: true,
+        shouldLoad: (query) => query.length >= 2,
+        load: async (query, callback) => {
+          try {
+            if (query.length < 2) return callback();
+            const { data, error } = await db
+              .from('ingredients')
+              .select('ingredient')
+              .ilike('ingredient', `%${query}%`)
+              .order('ingredient')
+              .limit(10);
+            if (error) throw error;
+            callback((data || []).map(r => ({ value: r.ingredient, text: r.ingredient })));
+          } catch (err) {
+            console.error('Ingredient search failed', err);
+            callback();
+          }
+        },
+        onType: function(query) {
+          if ((query || '').length < 2) {
+            this.clearOptions();
+            this.refreshOptions(false);
+            this.close();
+            return;
+          }
+          this.open();
+        }
+      };
+    }
+
+    function fillUnitSelect(selectEl) {
+      const units = window.__unitsList || [];
+      selectEl.innerHTML = `<option value="" disabled selected>Select unit</option>` +
+        units.map(u => `<option value="${u}">${u}</option>`).join('');
+    }
+
+    function resetRecipeDuplicateWarning() {
+      recipeAllowAppend = false;
+      qs('recipeDupWarn').hidden = true;
+      qs('recipeDupWarnText').textContent = '';
+    }
+
+    function destroyRecipeTomSelects() {
+      destroyTomSelect(recipeDishTs);
+      recipeDishTs = null;
+      const rowsHost = qs('recipeRows');
+      if (!rowsHost) return;
+      [...rowsHost.querySelectorAll('.recipe-row')].forEach(row => {
+        destroyTomSelect(row.__ingTs);
+        row.__ingTs = null;
+      });
+    }
+
+    function initRecipeFormIfNeeded() {
+      const dishSel = qs('recipeDishSelect');
+      const rows = qs('recipeRows');
+      if (!dishSel || !rows) return;
+
+      if (!recipeDishTs) {
+        recipeDishTs = new TomSelect(dishSel, makeDishTomSelectConfig(dishSel.closest('.ts-host')));
+        recipeDishTs.on('change', () => {
+          resetRecipeDuplicateWarning();
+        });
+      }
+
+      if (!rows.dataset.initialized) {
+        rows.dataset.initialized = '1';
+        rows.innerHTML = '';
+        addRecipeIngredientRow();
+      }
+    }
+
+    function addRecipeIngredientRow() {
+      const rows = qs('recipeRows');
+      if (!rows) return;
+      const row = document.createElement('div');
+      row.className = 'recipe-row';
+      row.innerHTML = `
+        <div class="recipe-row-grid">
+          <div class="field">
+            <span class="field-label">Ingredient</span>
+            <div class="ts-host">
+              <select class="recipe-ing-select"></select>
+            </div>
+            <div class="field-error recipe-ing-err" hidden></div>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Quantity</span>
+            <input class="field-input recipe-qty" type="number" step="any" inputmode="decimal" />
+            <div class="field-error recipe-qty-err" hidden></div>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Unit</span>
+            <select class="field-input recipe-unit"></select>
+            <div class="field-error recipe-unit-err" hidden></div>
+          </label>
+
+          <div class="recipe-row-actions">
+            <button type="button" class="icon-btn recipe-add-inline" title="Add ingredient row" aria-label="Add ingredient row">+</button>
+            <button type="button" class="icon-btn recipe-remove" title="Remove ingredient" aria-label="Remove ingredient">×</button>
+          </div>
+        </div>
+      `;
+
+      rows.appendChild(row);
+
+      const unitSel = row.querySelector('.recipe-unit');
+      fillUnitSelect(unitSel);
+
+      const ingSel = row.querySelector('.recipe-ing-select');
+      const ts = new TomSelect(ingSel, makeIngredientTomSelectConfig(ingSel.closest('.ts-host')));
+      row.__ingTs = ts;
+
+      row.querySelector('.recipe-add-inline').addEventListener('click', () => {
+        addRecipeIngredientRow();
+      });
+
+      row.querySelector('.recipe-remove').addEventListener('click', () => {
+        if (rows.querySelectorAll('.recipe-row').length <= 1) return;
+        destroyTomSelect(row.__ingTs);
+        row.__ingTs = null;
+        row.remove();
+      });
+    }
+
+    async function initAddView() {
+      wireCollapsibles();
+      try {
+        await loadAddLookups();
+      } catch (err) {
+        console.error('Failed to load lookup tables', err);
+        setFlash(qs('flashIngredient'), 'error', `Failed to load lookups: ${err.message || err}`);
+        setFlash(qs('flashDish'), 'error', `Failed to load lookups: ${err.message || err}`);
+        setFlash(qs('flashRecipe'), 'error', `Failed to load lookups: ${err.message || err}`);
+      }
+    }
+
+    function wireAddFormSubmitsOnce() {
+      const host = qs('view-add');
+      if (!host || host.dataset.wiredForms === '1') return;
+      host.dataset.wiredForms = '1';
+
+    qs('formIngredient').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = qs('ingName').value.trim();
+      const category = qs('ingCategory').value;
+      const season = qs('ingSeason').value.trim();
+
+      setFieldError(qs('ingNameErr'), '');
+      setFieldError(qs('ingCategoryErr'), '');
+      setFieldError(qs('ingSeasonErr'), '');
+      setFlash(qs('flashIngredient'), 'success', '');
+
+      if (!name) { setFieldError(qs('ingNameErr'), 'Ingredient name is required'); return; }
+      if (!category) { setFieldError(qs('ingCategoryErr'), 'Category is required'); return; }
+
+      const { data: existing, error: exErr } = await db
+        .from('ingredients')
+        .select('ingredient')
+        .eq('ingredient', name)
+        .maybeSingle();
+      if (exErr) { setFlash(qs('flashIngredient'), 'error', exErr.message); return; }
+      if (existing?.ingredient) {
+        setFieldError(qs('ingNameErr'), 'Ingredient already exists');
+        return;
+      }
+
+      const payload = { ingredient: name, ingredient_category: category, season: season || null };
+      const { error } = await db.from('ingredients').insert(payload);
+      if (error) {
+        setFlash(qs('flashIngredient'), 'error', error.message);
+        return;
+      }
+
+      setFlash(qs('flashIngredient'), 'success', 'Saved!');
+      e.target.reset();
+      window.setTimeout(() => setFlash(qs('flashIngredient'), 'success', ''), 1600);
+    });
+
+    qs('formDish').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = qs('dishName').value.trim();
+      const protein = qs('dishProtein').value;
+      const time = qs('dishTime').value.trim();
+      const instructions = qs('dishInstructions').value.trim();
+      const notes = qs('dishNotes').value.trim();
+
+      setFieldError(qs('dishNameErr'), '');
+      setFieldError(qs('dishProteinErr'), '');
+      setFieldError(qs('dishTimeErr'), '');
+      setFieldError(qs('dishInstructionsErr'), '');
+      setFieldError(qs('dishNotesErr'), '');
+      setFlash(qs('flashDish'), 'success', '');
+
+      if (!name) { setFieldError(qs('dishNameErr'), 'Dish name is required'); return; }
+      if (!protein) { setFieldError(qs('dishProteinErr'), 'Protein is required'); return; }
+
+      const { data: existing, error: exErr } = await db
+        .from('dishes')
+        .select('dish_name')
+        .eq('dish_name', name)
+        .maybeSingle();
+      if (exErr) { setFlash(qs('flashDish'), 'error', exErr.message); return; }
+      if (existing?.dish_name) {
+        setFieldError(qs('dishNameErr'), 'Dish already exists');
+        return;
+      }
+
+      const payload = {
+        dish_name: name,
+        protein,
+        time: time || null,
+        instructions: instructions || null,
+        notes: notes || null
+      };
+
+      const { error } = await db.from('dishes').insert(payload);
+      if (error) {
+        setFlash(qs('flashDish'), 'error', error.message);
+        return;
+      }
+
+      setFlash(qs('flashDish'), 'success', 'Saved!');
+      e.target.reset();
+      window.setTimeout(() => setFlash(qs('flashDish'), 'success', ''), 1600);
+    });
+
+    qs('recipeAddIngredientRow').addEventListener('click', () => {
+      initRecipeFormIfNeeded();
+      addRecipeIngredientRow();
+    });
+
+    qs('recipeDupCancel').addEventListener('click', () => {
+      resetRecipeDuplicateWarning();
+    });
+
+    qs('recipeDupProceed').addEventListener('click', () => {
+      recipeAllowAppend = true;
+      qs('recipeDupWarn').hidden = true;
+    });
+
+    qs('formRecipe').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      initRecipeFormIfNeeded();
+
+      setFlash(qs('flashRecipe'), 'success', '');
+      setFieldError(qs('recipeDishErr'), '');
+      setFieldError(qs('recipeNotesErr'), '');
+
+      const dishName = recipeDishTs?.getValue?.() || '';
+      const notesAll = qs('recipeNotes').value.trim();
+
+      if (!dishName) {
+        setFieldError(qs('recipeDishErr'), 'Dish is required');
+        return;
+      }
+
+      const rows = [...qs('recipeRows').querySelectorAll('.recipe-row')];
+      let rowOk = true;
+      const built = [];
+
+      rows.forEach((row) => {
+        const ingErr = row.querySelector('.recipe-ing-err');
+        const qtyErr = row.querySelector('.recipe-qty-err');
+        const unitErr = row.querySelector('.recipe-unit-err');
+        setFieldError(ingErr, '');
+        setFieldError(qtyErr, '');
+        setFieldError(unitErr, '');
+
+        const ts = row.__ingTs;
+        const ing = ts?.getValue?.() || '';
+        const qtyRaw = row.querySelector('.recipe-qty').value;
+        const unit = row.querySelector('.recipe-unit').value;
+
+        if (!ing) { setFieldError(ingErr, 'Ingredient is required'); rowOk = false; }
+        if (qtyRaw === '' || Number.isNaN(Number(qtyRaw))) { setFieldError(qtyErr, 'Quantity is required'); rowOk = false; }
+        if (!unit) { setFieldError(unitErr, 'Unit is required'); rowOk = false; }
+
+        if (ing && qtyRaw !== '' && !Number.isNaN(Number(qtyRaw)) && unit) {
+          built.push({
+            dish_name: dishName,
+            ingredient: ing,
+            quantity: Number(qtyRaw),
+            unit,
+            notes: notesAll || null
+          });
+        }
+      });
+
+      if (!rowOk) return;
+
+      const { data: existing, error: exErr } = await db
+        .from('recipes')
+        .select('dish_name')
+        .eq('dish_name', dishName)
+        .limit(1);
+      if (exErr) { setFlash(qs('flashRecipe'), 'error', exErr.message); return; }
+
+      if ((existing || []).length > 0 && !recipeAllowAppend) {
+        qs('recipeDupWarnText').textContent =
+          'Recipe already exists for this dish. Submitting will ADD these ingredients to the existing recipe.';
+        qs('recipeDupWarn').hidden = false;
+        return;
+      }
+
+      const { error } = await db.from('recipes').insert(built);
+      if (error) {
+        setFlash(qs('flashRecipe'), 'error', error.message);
+        return;
+      }
+
+      setFlash(qs('flashRecipe'), 'success', 'Saved!');
+      resetRecipeDuplicateWarning();
+
+      // reset recipe form UI
+      destroyRecipeTomSelects();
+      qs('recipeRows').innerHTML = '';
+      delete qs('recipeRows').dataset.initialized;
+      qs('recipeNotes').value = '';
+      initRecipeFormIfNeeded();
+
+      window.setTimeout(() => setFlash(qs('flashRecipe'), 'success', ''), 1600);
+    });
+
+    }
 
     // ── LOAD PLAN ────────────────────────────────────────────
     async function loadPlan() {
@@ -327,7 +970,10 @@
     }
 
     // ── INIT ─────────────────────────────────────────────────
+    syncWeekControls();
     loadPlan();
+    wireCollapsibles();
+    wireAddFormSubmitsOnce();
   </script>
 </body>
 </html>

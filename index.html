@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Papanje — Meal Planner</title>
 
   <!-- Tom Select -->
@@ -806,12 +806,23 @@
 
       // attach tap handlers
       document.querySelectorAll('.dish-chip').forEach(chip => {
-        chip.addEventListener('click', () => openModal(
-          parseInt(chip.dataset.id),
-          chip.dataset.dish,
-          chip.dataset.day,
-          chip.dataset.meal
-        ));
+        const handler = (e) => {
+          // iOS ghost click / double-fire prevention
+          if (e) e.preventDefault();
+          openModal(
+            parseInt(chip.dataset.id),
+            chip.dataset.dish,
+            chip.dataset.day,
+            chip.dataset.meal
+          );
+        };
+
+        // Prefer touchend on touch devices to avoid click-delay/ghost click issues
+        if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+          chip.addEventListener('touchend', handler, { passive: false });
+        } else {
+          chip.addEventListener('click', handler);
+        }
       });
     }
 
@@ -877,9 +888,10 @@
           // Allow backspace/clear to edit the search input without closing the modal
         }
       });
-      tsInstance.focus();
-      setTimeout(() => { tsInstance.focus(); }, 100);
-    }, 250);
+      // Delay focus slightly so iOS finishes processing the original tap
+      setTimeout(() => { tsInstance.focus(); }, 120);
+      setTimeout(() => { tsInstance.focus(); }, 260);
+    }, 320);
     }
 
     function closeModal() {
